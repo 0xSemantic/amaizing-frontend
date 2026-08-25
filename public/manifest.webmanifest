@@ -1,0 +1,26 @@
+{
+  "name": "Amaizing – Maize Disease Detection",
+  "short_name": "Amaizing",
+  "description": "Mobile maize leaf disease detection with explainable AI.",
+  "id": "/",
+  "start_url": "/#detector",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#f5f8f8",
+  "theme_color": "#579fa8",
+  "categories": ["health", "utilities", "education"],
+  "shortcuts": [
+    {
+      "name": "Detect maize disease",
+      "short_name": "Detect",
+      "url": "/#detector",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
