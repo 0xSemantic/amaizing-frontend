@@ -137,7 +137,10 @@ function App() {
   return <>
     <header className="nav">
       <div className="nav-inner">
-        <a className="brand" href="#home">🌽 Amaizing</a>
+        <div className="brand-group">
+          <a className="brand" href="#home">🌽 Amaizing</a>
+          <span className="credit-badge">by Firstman Noah Otobo</span>
+        </div>
         <div className="nav-actions">
           <span className={`connection ${online === true ? 'online' : online === false ? 'offline' : ''}`}>
             {online === true ? 'API online' : online === false ? 'API offline' : 'Checking API…'}
@@ -158,6 +161,7 @@ function App() {
             <p className="lead">Upload or photograph a maize leaf and receive an explainable disease diagnosis from the trained ResNet50 model.</p>
             <div className="hero-actions"><a className="button" href="#detector">Launch Detector</a><a className="button button-ghost" href="#how-it-works">How It Works</a></div>
             <div className="feature-pills" aria-label="Key features"><span>96–97% accuracy</span><span>Grad-CAM</span><span>Mobile-ready</span></div>
+            <p className="credit-line">Built, owned &amp; powered by <strong>Firstman Noah Otobo</strong></p>
           </div>
           <div className="hero-card" aria-hidden="true"><div className="leaf">🌿</div><div className="scan-line"></div><strong>Leaf analysis</strong><span>Explainable results in moments</span></div>
         </div>
@@ -170,7 +174,7 @@ function App() {
             <section className="panel">
               <h3><span aria-hidden="true">📷</span> Provide Leaf Image</h3>
               <form onSubmit={analyze}>
-                <input ref={inputRef} type="file" accept="image/jpeg,image/png" capture="environment" hidden onChange={event => chooseFile(event.target.files[0])}/>
+                <input ref={inputRef} type="file" accept="image/jpeg,image/png" hidden onChange={event => chooseFile(event.target.files[0])}/>
                 {!preview && <button className="drop-zone" type="button" onClick={() => inputRef.current?.click()} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); chooseFile(event.dataTransfer.files[0]) }}>
                   <span className="upload-icon">☁</span><strong>Tap to take or choose a photo</strong><small>JPEG or PNG, up to 5 MB</small>
                 </button>}
@@ -204,7 +208,7 @@ function App() {
         <article><span>⌁</span><h3>Built for phones</h3><p>Install it as a PWA and launch directly from your home screen.</p></article>
       </div></section>
     </main>
-    <footer>Amaizing – AI-Powered Maize Disease Detection • 2026</footer>
+    <footer>Amaizing – AI-Powered Maize Disease Detection • 2026<span className="footer-credit">Built, owned &amp; powered by Firstman Noah Otobo</span></footer>
     {message && <div className="toast" role="status">{message}</div>}
     {!installed && showInstall && <div className="install-overlay" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) dismissInstall() }}>
       <section className="install-dialog" role="dialog" aria-modal="true" aria-labelledby="install-title">
@@ -218,6 +222,7 @@ function App() {
             : isIos
               ? <p>In Safari, tap the <strong>Share</strong> button, then choose <strong>Add to Home Screen</strong> and confirm.</p>
               : <p>Open your browser menu and choose <strong>Install Amaizing</strong> or <strong>Add to Home screen</strong>. Installation requires HTTPS or localhost.</p>}
+          <p className="install-credit">Built, owned &amp; powered by Firstman Noah Otobo</p>
           <div className="install-actions">
             {installPrompt && <button className="button" type="button" onClick={installApp}>Install now</button>}
             <button className="button button-ghost" type="button" onClick={dismissInstall}>{installPrompt ? 'Maybe later' : 'Got it'}</button>
