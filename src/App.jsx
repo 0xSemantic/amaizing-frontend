@@ -9,6 +9,57 @@ const MAX_UPLOAD_MB = Number(import.meta.env.VITE_MAX_UPLOAD_MB) > 0
   : 500
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 
+// The model works from a 224px crop, so a long edge of 1600px keeps every detail
+// that affects the diagnosis while cutting a 12 MB phone photo to a few hundred KB.
+const MAX_IMAGE_EDGE = 1600
+const RECOMPRESS_ABOVE_BYTES = 2 * 1024 * 1024
+const JPEG_QUALITY = 0.85
+
+async function decodeImage(file) {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      // Applies the EXIF rotation phones record instead of baking in a sideways leaf.
+      return await createImageBitmap(file, { imageOrientation: 'from-image' })
+    } catch {
+      return await createImageBitmap(file)
+    }
+  }
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const image = new Image()
+    image.onload = () => { URL.revokeObjectURL(url); resolve(image) }
+    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('The image could not be decoded.')) }
+    image.src = url
+  })
+}
+
+// Shrinks oversized camera photos before upload. Returns the original file whenever
+// resizing would not help, so a small hand-picked image is sent through untouched.
+async function shrinkImage(file) {
+  const source = await decodeImage(file)
+  const width = source.width || source.naturalWidth
+  const height = source.height || source.naturalHeight
+  if (!width || !height) {
+    source.close?.()
+    return file
+  }
+  const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(width, height))
+  if (scale === 1 && file.size <= RECOMPRESS_ABOVE_BYTES) {
+    source.close?.()
+    return file
+  }
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(width * scale))
+  canvas.height = Math.max(1, Math.round(height * scale))
+  const context = canvas.getContext('2d')
+  context.drawImage(source, 0, 0, canvas.width, canvas.height)
+  source.close?.()
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY))
+  if (!blob || blob.size >= file.size) return file
+  const stem = file.name.replace(/\.[^.]+$/, '') || 'leaf'
+  return new File([blob], `${stem}.jpg`, { type: 'image/jpeg', lastModified: Date.now() })
+}
+
 function App() {
   const [dark, setDark] = useState(() => {
     const saved = localStorage.getItem('theme')
@@ -25,7 +76,11 @@ function App() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [preparing, setPreparing] = useState(false)
   const inputRef = useRef(null)
+  // Tracks the live object URL so it is revoked exactly once, even across the await
+  // in chooseFile and the double render StrictMode performs in development.
+  const previewRef = useRef('')
 
   useEffect(() => {
     document.body.classList.toggle('dark', dark)
@@ -65,6 +120,10 @@ function App() {
     }
   }, [])
 
+  useEffect(() => () => {
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+  }, [])
+
   useEffect(() => {
     if (!message) return undefined
     const timer = setTimeout(() => setMessage(''), 5000)
@@ -78,7 +137,13 @@ function App() {
     return () => clearTimeout(timer)
   }, [installed])
 
-  function chooseFile(nextFile) {
+  function showPreview(nextUrl) {
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+    previewRef.current = nextUrl
+    setPreview(nextUrl)
+  }
+
+  async function chooseFile(nextFile) {
     if (!nextFile) return
     if (!['image/jpeg', 'image/png'].includes(nextFile.type)) {
       setMessage('Please choose a JPEG or PNG image.')
@@ -88,16 +153,24 @@ function App() {
       setMessage(`The image must be ${MAX_UPLOAD_MB} MB or smaller.`)
       return
     }
-    if (preview) URL.revokeObjectURL(preview)
-    setFile(nextFile)
-    setPreview(URL.createObjectURL(nextFile))
+    setPreparing(true)
+    let ready = nextFile
+    try {
+      ready = await shrinkImage(nextFile)
+    } catch {
+      // A browser that cannot decode the file still gets to upload the original.
+      ready = nextFile
+    } finally {
+      setPreparing(false)
+    }
+    setFile(ready)
+    showPreview(URL.createObjectURL(ready))
     setResult(null)
   }
 
   function clearFile() {
-    if (preview) URL.revokeObjectURL(preview)
     setFile(null)
-    setPreview('')
+    showPreview('')
     setResult(null)
   }
 
@@ -182,10 +255,10 @@ function App() {
               <form onSubmit={analyze}>
                 <input ref={inputRef} type="file" accept="image/jpeg,image/png" hidden onChange={event => { chooseFile(event.target.files[0]); event.target.value = '' }}/>
                 {!preview && <button className="drop-zone" type="button" onClick={() => inputRef.current?.click()} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); chooseFile(event.dataTransfer.files[0]) }}>
-                  <span className="upload-icon">☁</span><strong>Tap to take or choose a photo</strong><small>JPEG or PNG, up to {MAX_UPLOAD_MB} MB</small>
+                  <span className="upload-icon">☁</span><strong>Tap to take or choose a photo</strong><small>JPEG or PNG, up to {MAX_UPLOAD_MB} MB. Large photos are resized on your phone before upload.</small>
                 </button>}
                 {preview && <div className="preview"><img src={preview} alt="Selected maize leaf preview"/><button className="clear-button" type="button" onClick={clearFile} aria-label="Remove selected image">×</button></div>}
-                <button className="button analyze-button" type="submit" disabled={!file || loading}>{loading ? <>Analyzing… <span className="spinner"/></> : 'Analyze Image'}</button>
+                <button className="button analyze-button" type="submit" disabled={!file || loading || preparing}>{preparing ? <>Preparing photo… <span className="spinner"/></> : loading ? <>Analyzing… <span className="spinner"/></> : 'Analyze Image'}</button>
               </form>
             </section>
             <section className="panel result-panel" aria-live="polite">
