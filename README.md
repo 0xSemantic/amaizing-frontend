@@ -3,6 +3,8 @@
 This is an independent Vite + React PWA. It has no backend templating.
 
 1. Copy `.env.example` to `.env` and set `VITE_API_URL` to the deployed FastAPI URL.
+   `VITE_MAX_UPLOAD_MB` sets the upload ceiling (500 MB by default) and should match
+   `AMAIZING_MAX_UPLOAD_MB` on the API.
 2. Run `npm install` and `npm run build`.
 3. Deploy the generated `dist/` directory to any HTTPS static host or web server.
 4. Add the frontend origin to `AMAIZING_FRONTEND_ORIGINS` on the backend.

@@ -2,6 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
 
+// Phone cameras produce large photos, so the ceiling is generous and only guards
+// against obviously unusable uploads. Keep it in step with AMAIZING_MAX_UPLOAD_MB.
+const MAX_UPLOAD_MB = Number(import.meta.env.VITE_MAX_UPLOAD_MB) > 0
+  ? Number(import.meta.env.VITE_MAX_UPLOAD_MB)
+  : 500
+const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
+
 function App() {
   const [dark, setDark] = useState(() => {
     const saved = localStorage.getItem('theme')
@@ -77,8 +84,8 @@ function App() {
       setMessage('Please choose a JPEG or PNG image.')
       return
     }
-    if (nextFile.size > 5 * 1024 * 1024) {
-      setMessage('The image must be 5 MB or smaller.')
+    if (nextFile.size > MAX_UPLOAD_BYTES) {
+      setMessage(`The image must be ${MAX_UPLOAD_MB} MB or smaller.`)
       return
     }
     if (preview) URL.revokeObjectURL(preview)
@@ -92,7 +99,6 @@ function App() {
     setFile(null)
     setPreview('')
     setResult(null)
-    if (inputRef.current) inputRef.current.value = ''
   }
 
   async function analyze(event) {
@@ -160,7 +166,7 @@ function App() {
             <h1>Protect every maize leaf with <span>Amaizing</span> intelligence.</h1>
             <p className="lead">Upload or photograph a maize leaf and receive an explainable disease diagnosis from the trained ResNet50 model.</p>
             <div className="hero-actions"><a className="button" href="#detector">Launch Detector</a><a className="button button-ghost" href="#how-it-works">How It Works</a></div>
-            <div className="feature-pills" aria-label="Key features"><span>96–97% accuracy</span><span>Grad-CAM</span><span>Mobile-ready</span></div>
+            <div className="feature-pills" aria-label="Key features"><span>96-97% accuracy</span><span>Grad-CAM</span><span>Mobile-ready</span></div>
             <p className="credit-line">Built, owned &amp; powered by <strong>Firstman Noah Otobo</strong></p>
           </div>
           <div className="hero-card" aria-hidden="true"><div className="leaf">🌿</div><div className="scan-line"></div><strong>Leaf analysis</strong><span>Explainable results in moments</span></div>
@@ -174,9 +180,9 @@ function App() {
             <section className="panel">
               <h3><span aria-hidden="true">📷</span> Provide Leaf Image</h3>
               <form onSubmit={analyze}>
-                <input ref={inputRef} type="file" accept="image/jpeg,image/png" hidden onChange={event => chooseFile(event.target.files[0])}/>
+                <input ref={inputRef} type="file" accept="image/jpeg,image/png" hidden onChange={event => { chooseFile(event.target.files[0]); event.target.value = '' }}/>
                 {!preview && <button className="drop-zone" type="button" onClick={() => inputRef.current?.click()} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); chooseFile(event.dataTransfer.files[0]) }}>
-                  <span className="upload-icon">☁</span><strong>Tap to take or choose a photo</strong><small>JPEG or PNG, up to 5 MB</small>
+                  <span className="upload-icon">☁</span><strong>Tap to take or choose a photo</strong><small>JPEG or PNG, up to {MAX_UPLOAD_MB} MB</small>
                 </button>}
                 {preview && <div className="preview"><img src={preview} alt="Selected maize leaf preview"/><button className="clear-button" type="button" onClick={clearFile} aria-label="Remove selected image">×</button></div>}
                 <button className="button analyze-button" type="submit" disabled={!file || loading}>{loading ? <>Analyzing… <span className="spinner"/></> : 'Analyze Image'}</button>
@@ -208,7 +214,7 @@ function App() {
         <article><span>⌁</span><h3>Built for phones</h3><p>Install it as a PWA and launch directly from your home screen.</p></article>
       </div></section>
     </main>
-    <footer>Amaizing – AI-Powered Maize Disease Detection • 2026<span className="footer-credit">Built, owned &amp; powered by Firstman Noah Otobo</span></footer>
+    <footer>Amaizing - AI-Powered Maize Disease Detection • 2026<span className="footer-credit">Built, owned &amp; powered by Firstman Noah Otobo</span></footer>
     {message && <div className="toast" role="status">{message}</div>}
     {!installed && showInstall && <div className="install-overlay" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) dismissInstall() }}>
       <section className="install-dialog" role="dialog" aria-modal="true" aria-labelledby="install-title">
